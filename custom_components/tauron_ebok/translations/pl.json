@@ -1,0 +1,54 @@
+{
+  "title": "TAURON eBOK",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Połącz Mój TAURON",
+        "description": "Podaj dane logowania do Mój TAURON. Wersja eksperymentalna sprawdzi logowanie i odczyta metadane faktur. Nie pobiera PDF ani nie wykonuje płatności.",
+        "data": {
+          "username": "Login",
+          "password": "Hasło"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Ponownie połącz Mój TAURON",
+        "description": "Podaj hasło do istniejącego konta. MFA lub CAPTCHA wymaga działania poza integracją.",
+        "data": {
+          "password": "Hasło"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Logowanie nie powiodło się. Sprawdź dane.",
+      "cannot_connect": "Nie można połączyć się z TAURON.",
+      "portal_changed": "Odpowiedź portalu nie jest obsługiwana. Nie uzyskano kompletnej listy dokumentów.",
+      "interactive_login": "Portal wymaga interaktywnego kroku logowania, np. MFA."
+    },
+    "abort": {
+      "already_configured": "To konto jest już skonfigurowane.",
+      "reauth_successful": "Zaktualizowano dane logowania."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "document_count": {
+        "name": "Dokumenty z ostatnich 180 dni"
+      },
+      "latest_issue": {
+        "name": "Data wystawienia ostatniego dokumentu"
+      },
+      "latest_gross": {
+        "name": "Kwota brutto ostatniego dokumentu"
+      },
+      "latest_due": {
+        "name": "Termin płatności ostatniego dokumentu"
+      },
+      "latest_status": {
+        "name": "Status płatności ostatniego dokumentu"
+      },
+      "last_success": {
+        "name": "Ostatnie poprawne sprawdzenie"
+      }
+    }
+  }
+}
