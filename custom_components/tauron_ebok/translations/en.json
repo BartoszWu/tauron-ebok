@@ -1,0 +1,54 @@
+{
+  "title": "TAURON eBOK",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect Mój TAURON",
+        "description": "Enter your Mój TAURON credentials. This experimental integration validates login and reads invoice metadata. It does not download PDFs or make payments.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reconnect Mój TAURON",
+        "description": "Enter the password for the existing account. MFA or CAPTCHA requires attention outside this integration.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Authentication failed. Check your credentials.",
+      "cannot_connect": "Cannot connect to TAURON.",
+      "portal_changed": "The portal response is not supported. No complete invoice scan was obtained.",
+      "interactive_login": "The portal requires an interactive login step (for example MFA)."
+    },
+    "abort": {
+      "already_configured": "This account is already configured.",
+      "reauth_successful": "Authentication updated."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "document_count": {
+        "name": "Documents in the last 180 days"
+      },
+      "latest_issue": {
+        "name": "Latest document issue date"
+      },
+      "latest_gross": {
+        "name": "Latest document gross amount"
+      },
+      "latest_due": {
+        "name": "Latest document due date"
+      },
+      "latest_status": {
+        "name": "Latest document payment status"
+      },
+      "last_success": {
+        "name": "Last successful check"
+      }
+    }
+  }
+}
