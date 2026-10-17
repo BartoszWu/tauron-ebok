@@ -22,7 +22,10 @@
       "invalid_auth": "Authentication failed. Check your credentials.",
       "cannot_connect": "Cannot connect to TAURON.",
       "portal_changed": "The portal response is not supported. No complete invoice scan was obtained.",
-      "interactive_login": "The portal requires an interactive login step (for example MFA)."
+      "interactive_login": "The portal requires an interactive login step (for example MFA).",
+      "portal_login": "The login response or redirect was not recognized. Check the integration version; this does not mean your password is wrong.",
+      "portal_archive": "The archive page or its account data could not be read. Login success has not been confirmed.",
+      "portal_documents": "The invoice list response was not recognized or was incomplete. No documents were accepted from this scan."
     },
     "abort": {
       "already_configured": "This account is already configured.",

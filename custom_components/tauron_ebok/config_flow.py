@@ -41,8 +41,8 @@ class TauronConfigFlow(ConfigFlow, domain=DOMAIN):
             return "invalid_auth"
         except ConnectionError:
             return "cannot_connect"
-        except PortalChanged:
-            return "portal_changed"
+        except PortalChanged as err:
+            return err.ui_error
         finally:
             await transport.close()
         return None
@@ -61,7 +61,10 @@ class TauronConfigFlow(ConfigFlow, domain=DOMAIN):
                 if error is None:
                     return self.async_create_entry(title="TAURON eBOK", data=user_input)
                 errors["base"] = error
-        return self.async_show_form(step_id="user", data_schema=credentials_schema(), errors=errors)
+        username = user_input[CONF_USERNAME] if user_input is not None else ""
+        return self.async_show_form(
+            step_id="user", data_schema=credentials_schema(username), errors=errors
+        )
 
     async def async_step_reauth(self, entry_data: dict) -> ConfigFlowResult:
         return await self.async_step_reauth_confirm()

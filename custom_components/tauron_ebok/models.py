@@ -24,6 +24,26 @@ class InteractiveLoginRequired(AuthenticationError):
 class PortalChanged(TauronError):
     """Unexpected HTML, JSON, or pagination; never interpreted as no invoices."""
 
+    ui_error = "portal_changed"
+
+
+class LoginPageChanged(PortalChanged):
+    """Login response or destination was not recognized."""
+
+    ui_error = "portal_login"
+
+
+class ArchivePageChanged(PortalChanged):
+    """Archive page or its account contexts were not recognized."""
+
+    ui_error = "portal_archive"
+
+
+class DocumentsPageChanged(PortalChanged):
+    """Invoice list response was not recognized or was incomplete."""
+
+    ui_error = "portal_documents"
+
 
 class ConnectionError(TauronError):
     """Transport failed without exposing request details."""

@@ -3,10 +3,18 @@
 Eksperymentalna, niezależna integracja Home Assistant do odczytu metadanych
 faktur z Mój TAURON. Nieoficjalny projekt, niezwiązany z TAURON.
 
-**Status 0.1.0: implementacja lokalna, bez testu logowania na rzeczywistym
+**Status 0.1.1: implementacja lokalna, bez testu logowania na rzeczywistym
 koncie i bez wdrożenia do Home Assistant.** Testy syntetyczne nie dowodzą
 zgodności z aktualnym HTML logowania ani archiwum. Repozytorium: [BartoszWu/tauron-ebok](https://github.com/BartoszWu/tauron-ebok).
 Wydanie służy do kontrolowanego testu konfiguracji i odczytu danych.
+
+## Diagnostyka konfiguracji
+
+Wersja 0.1.1 rozróżnia błędy odpowiedzi logowania, archiwum/kontekstu klienta
+oraz listy dokumentów. Komunikat wskazuje etap, nie udowodnioną przyczynę.
+Nie zapisuje żadnych dodatkowych logów, odpowiedzi HTTP ani sekretów.
+Po błędzie zachowuje login w formularzu; hasło trzeba wpisać ponownie.
+Nie naprawia jeszcze nieustalonej niezgodności z portalem na rzeczywistym koncie.
 
 ## Zakres pierwszej wersji
 

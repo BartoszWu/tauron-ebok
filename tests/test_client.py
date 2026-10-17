@@ -96,6 +96,27 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
     async def fetch(self, transport):
         return await TauronClient(transport, "synthetic-user", "synthetic-password").fetch(TODAY)
 
+    async def test_configuration_error_identifies_archive_stage(self):
+        transport = FakeTransport(Response(200, portal.ARCHIVE, "<html>unknown markup</html>"))
+        with self.assertRaises(PortalChanged) as result:
+            await self.fetch(transport)
+        self.assertEqual(result.exception.ui_error, "portal_archive")
+
+    async def test_configuration_error_identifies_login_stage(self):
+        transport = FakeTransport(
+            Response(401, portal.ARCHIVE, ""),
+            Response(200, portal.LOGIN, "<html>unknown login</html>"),
+        )
+        with self.assertRaises(PortalChanged) as result:
+            await self.fetch(transport)
+        self.assertEqual(result.exception.ui_error, "portal_login")
+
+    async def test_configuration_error_identifies_document_stage(self):
+        transport = FakeTransport(archive(), Response(200, portal.DOCUMENTS, "{}"))
+        with self.assertRaises(PortalChanged) as result:
+            await self.fetch(transport)
+        self.assertEqual(result.exception.ui_error, "portal_documents")
+
     async def test_existing_session_uses_get_only(self):
         transport = FakeTransport(archive(), page([document()]))
         result = await self.fetch(transport)
