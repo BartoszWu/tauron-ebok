@@ -22,7 +22,10 @@
       "invalid_auth": "Logowanie nie powiodło się. Sprawdź dane.",
       "cannot_connect": "Nie można połączyć się z TAURON.",
       "portal_changed": "Odpowiedź portalu nie jest obsługiwana. Nie uzyskano kompletnej listy dokumentów.",
-      "interactive_login": "Portal wymaga interaktywnego kroku logowania, np. MFA."
+      "interactive_login": "Portal wymaga interaktywnego kroku logowania, np. MFA.",
+      "portal_login": "Nie rozpoznano odpowiedzi lub przekierowania podczas logowania. Ten błąd nie oznacza, że hasło jest nieprawidłowe.",
+      "portal_archive": "Nie udało się odczytać strony archiwum lub danych konta. Nie potwierdzono jeszcze poprawnego zalogowania.",
+      "portal_documents": "Odpowiedź listy dokumentów jest nierozpoznana lub niekompletna. Nie przyjęto wyników tego odczytu."
     },
     "abort": {
       "already_configured": "To konto jest już skonfigurowane.",
