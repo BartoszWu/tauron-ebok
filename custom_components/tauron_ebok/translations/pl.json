@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Połącz Mój TAURON",
-        "description": "Podaj dane logowania do Mój TAURON. Wersja eksperymentalna sprawdzi logowanie i odczyta metadane faktur. Nie pobiera PDF ani nie wykonuje płatności.",
+        "description": "Podaj dane do Mój TAURON. Sprawdzimy wyłącznie logowanie i po sukcesie zapiszemy dane w Home Assistant. Dokumenty sprawdzisz później przyciskiem w integracji.",
         "data": {
           "username": "Login",
           "password": "Hasło"
@@ -51,7 +51,26 @@
       },
       "last_success": {
         "name": "Ostatnie poprawne sprawdzenie"
+      },
+      "check_status": {
+        "name": "Status odczytu dokumentów",
+        "state": {
+          "not_checked": "Nie sprawdzano",
+          "checking": "Sprawdzanie",
+          "success": "Odczytano",
+          "failed": "Błąd"
+        }
       }
+    },
+    "button": {
+      "check_documents": {
+        "name": "Sprawdź dokumenty"
+      }
+    }
+  },
+  "exceptions": {
+    "document_check_failed": {
+      "message": "Nie udało się odczytać dokumentów. Sprawdź status odczytu w integracji. Dane logowania pozostają zapisane."
     }
   }
 }

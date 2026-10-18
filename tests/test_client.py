@@ -93,6 +93,36 @@ class FakeTransport:
 
 
 class ClientTests(unittest.IsolatedAsyncioTestCase):
+    async def test_verify_login_never_requests_archive_or_documents(self):
+        transport = FakeTransport(
+            Response(200, portal.LOGIN, LOGIN_HTML),
+            Response(200, PORTAL, "<html>redirect complete</html>"),
+            Response(200, PORTAL, '<a href="/api/sitecore/Home/LogOut">Wyloguj</a>'),
+        )
+        client = TauronClient(transport, "synthetic-user", "synthetic-password")
+        await client.verify_login()
+        self.assertEqual(len(transport.calls), 3)
+        self.assertEqual(transport.calls[-1][1], PORTAL)
+        self.assertFalse(
+            any(call[1] in {portal.ARCHIVE, portal.DOCUMENTS} for call in transport.calls)
+        )
+
+    async def test_verify_login_rejects_unconfirmed_landing_page(self):
+        transport = FakeTransport(
+            Response(200, portal.LOGIN, LOGIN_HTML),
+            Response(200, PORTAL, ""),
+            Response(200, PORTAL, "<html>unknown page</html>"),
+        )
+        with self.assertRaises(models.LoginPageChanged):
+            await TauronClient(transport, "synthetic-user", "synthetic-password").verify_login()
+
+    async def test_verify_login_rejects_bad_password(self):
+        transport = FakeTransport(
+            Response(200, portal.LOGIN, LOGIN_HTML), Response(200, portal.LOGIN, LOGIN_HTML)
+        )
+        with self.assertRaises(AuthenticationError):
+            await TauronClient(transport, "synthetic-user", "synthetic-password").verify_login()
+
     async def fetch(self, transport):
         return await TauronClient(transport, "synthetic-user", "synthetic-password").fetch(TODAY)
 
@@ -265,7 +295,7 @@ class ParserTests(unittest.TestCase):
             '<div data-api-url="/api/sitecore/EbokArchiveDocuments/GetDocuments" '
             'data-client-number="synthetic-client" '
             'data-client-checksum="synthetic-checksum" data-system="TEST" data-perpage="5">'
-            '</div>'
+            "</div>"
         )
         self.assertEqual(portal.discover_accounts(html), (ACCOUNT,))
 

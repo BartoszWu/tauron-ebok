@@ -28,6 +28,14 @@ class TauronSensorDescription(SensorEntityDescription):
 
 SENSORS = (
     TauronSensorDescription(
+        key="check_status",
+        translation_key="check_status",
+        device_class=SensorDeviceClass.ENUM,
+        options=["not_checked", "checking", "success", "failed"],
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda c: c.check_status,
+    ),
+    TauronSensorDescription(
         key="document_count",
         translation_key="document_count",
         icon="mdi:file-document-multiple",
@@ -97,14 +105,29 @@ class TauronSensor(CoordinatorEntity[TauronCoordinator], SensorEntity):
         )
 
     @property
+    def available(self) -> bool:
+        if self.entity_description.key in {"check_status", "last_success"}:
+            return True
+        return self.coordinator.data is not None and super().available
+
+    @property
     def native_value(self) -> SensorValue:
+        if (
+            self.entity_description.key not in {"check_status", "last_success"}
+            and self.coordinator.data is None
+        ):
+            return None
         return self.entity_description.value_fn(self.coordinator)
 
     @property
     def extra_state_attributes(self) -> dict | None:
+        if self.entity_description.key == "check_status":
+            return {"last_error": self.coordinator.last_error}
         if self.entity_description.key != "document_count":
             return None
         data = self.coordinator.data
+        if data is None:
+            return None
         return {
             "date_from": data.date_from.isoformat(),
             "date_to": data.date_to.isoformat(),

@@ -8,7 +8,6 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers import selector
-from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .models import AuthenticationError, ConnectionError, InteractiveLoginRequired, PortalChanged
@@ -34,7 +33,7 @@ class TauronConfigFlow(ConfigFlow, domain=DOMAIN):
             self.hass, user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
         )
         try:
-            await client.fetch(dt_util.now().date())
+            await client.verify_login()
         except InteractiveLoginRequired:
             return "interactive_login"
         except AuthenticationError:
