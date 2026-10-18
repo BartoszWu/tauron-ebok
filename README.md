@@ -3,10 +3,25 @@
 Eksperymentalna, niezależna integracja Home Assistant do odczytu metadanych
 faktur z Mój TAURON. Nieoficjalny projekt, niezwiązany z TAURON.
 
-**Status 0.1.1: implementacja lokalna, bez testu logowania na rzeczywistym
+**Status 0.1.2: implementacja lokalna, bez testu logowania na rzeczywistym
 koncie i bez wdrożenia do Home Assistant.** Testy syntetyczne nie dowodzą
 zgodności z aktualnym HTML logowania ani archiwum. Repozytorium: [BartoszWu/tauron-ebok](https://github.com/BartoszWu/tauron-ebok).
 Wydanie służy do kontrolowanego testu konfiguracji i odczytu danych.
+
+## Poprawka odczytu archiwum — 0.1.2
+
+Potwierdzono w źródle zalogowanego archiwum atrybuty `data-client-number`
+i `data-client-checksum`. Publiczny `/scripts/script.js` (funkcja
+`dataAjaxFillTable`) odczytuje je wraz z `data-system`. Parser wcześniej
+pomijał `data-client-checksum`, ponieważ rozpoznawał wyłącznie nazwę zgodną
+z parametrem API `clientNumberCheckSum`. Wersja 0.1.2 obsługuje oba warianty.
+
+Test regresyjny z rzeczywistymi nazwami atrybutów i fikcyjnymi wartościami
+odtwarzał błąd przed poprawką. Nie zapisano źródła konta ani jego wartości.
+Naprawa nie dodaje żadnych żądań POST; widoczny w stronie LoadMoreDocuments
+służy do doładowywania kolejnych umów i nie jest wywoływany przez integrację.
+Kompletność kont przy więcej niż początkowo pokazana liczba umów nadal wymaga
+osobnej weryfikacji.
 
 ## Diagnostyka konfiguracji
 
@@ -84,11 +99,10 @@ Nadal wymagają sprawdzenia na koncie:
 
 1. Przekierowania i formularz logowania HTTP do Mój TAURON. Algorytm oparto na
    publicznym kodzie AMIplus, ale jego obsługa Mój TAURON jest nieaktywna.
-2. Sposób osadzenia kontekstów klienta w HTML archiwum. Parser obsługuje pełne
-   zestawy `system`, `clientNumber`, `clientNumberCheckSum` w atrybutach,
-   linkach i JSON. Te warianty testowano syntetycznie, nie potwierdzono ich
-   rzeczywistego kodowania w HTML portalu. Nie zgaduje ani nie łączy fragmentów
-   z różnych klientów. Nierozpoznany HTML kończy konfigurację błędem.
+2. Działanie poprawionego parsera w pełnym cyklu konfiguracji HA. Nazwy
+   atrybutów klienta, checksum i systemu potwierdzono w HTML/publicznym skrypcie;
+   wartości w testach są fikcyjne. Parser nie łączy fragmentów z różnych
+   klientów. Nierozpoznany HTML kończy konfigurację błędem.
 3. Trwałość klucza z kontekstu klienta/systemu, typu, numeru technicznego i SodId.
    Klucz jest roboczy; nie należy na nim jeszcze opierać trwałego archiwum.
 4. Zachowanie pustych stron, limity zakresów i zmiany listy podczas paginacji.

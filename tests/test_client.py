@@ -26,7 +26,7 @@ PORTAL = portal.PORTAL
 ACCOUNT = models.Account("TEST", "synthetic-client", "synthetic-checksum")
 ARCHIVE_HTML = (
     '<div data-system="TEST" data-client-number="synthetic-client" '
-    'data-client-number-check-sum="synthetic-checksum"></div>'
+    'data-client-checksum="synthetic-checksum"></div>'
 )
 LOGIN_HTML = (
     '<form id="kc-form-login" method="post" '
@@ -258,6 +258,17 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
 
 
 class ParserTests(unittest.TestCase):
+    def test_live_archive_attribute_names(self):
+        # Names confirmed in portal HTML and /scripts/script.js dataAjaxFillTable.
+        # Values are synthetic; the actual authenticated response is never saved.
+        html = (
+            '<div data-api-url="/api/sitecore/EbokArchiveDocuments/GetDocuments" '
+            'data-client-number="synthetic-client" '
+            'data-client-checksum="synthetic-checksum" data-system="TEST" data-perpage="5">'
+            '</div>'
+        )
+        self.assertEqual(portal.discover_accounts(html), (ACCOUNT,))
+
     def test_key_is_stable_when_payment_status_changes(self):
         first = models.Invoice.parse(ACCOUNT, document())
         second = models.Invoice.parse(ACCOUNT, document(Status="Inny status"))

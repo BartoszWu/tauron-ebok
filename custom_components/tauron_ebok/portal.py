@@ -91,7 +91,9 @@ def _account(values: dict) -> Account | None:
         for k, v in values.items()
     }
     customer = normalized.get("clientnumber") or normalized.get("customernumber")
-    checksum = normalized.get("clientnumberchecksum")
+    # The archive's dataAjaxFillTable reads data-client-checksum. The API uses
+    # clientNumberCheckSum; retain that spelling for JSON/query contexts too.
+    checksum = normalized.get("clientnumberchecksum") or normalized.get("clientchecksum")
     system = normalized.get("system")
     if all(
         isinstance(v, (str, int)) and not isinstance(v, bool) and str(v)
