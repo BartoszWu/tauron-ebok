@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Connect Mój TAURON",
-        "description": "Enter your Mój TAURON credentials. We will verify login only and save the credentials in Home Assistant after success. Check documents later using the integration button.",
+        "description": "Enter your Mój TAURON credentials. We verify login only and save them in Home Assistant. Enable consumption history separately in integration options.",
         "data": {
           "username": "Username",
           "password": "Password"
@@ -25,7 +25,8 @@
       "interactive_login": "The portal requires an interactive login step (for example MFA).",
       "portal_login": "The login response or redirect was not recognized. Check the integration version; this does not mean your password is wrong.",
       "portal_archive": "The archive page or its account data could not be read. Login success has not been confirmed.",
-      "portal_documents": "The invoice list response was not recognized or was incomplete. No documents were accepted from this scan."
+      "portal_documents": "The invoice list response was not recognized or was incomplete. No documents were accepted from this scan.",
+      "portal_history": "History or the selected consumption point was not recognized. Previously confirmed data is retained."
     },
     "abort": {
       "already_configured": "This account is already configured.",
@@ -60,17 +61,79 @@
           "success": "Successful",
           "failed": "Failed"
         }
+      },
+      "history_total": {
+        "name": "Imported consumption history"
+      },
+      "history_latest": {
+        "name": "Latest consumption month"
+      },
+      "history_last_success": {
+        "name": "Last successful history import"
+      },
+      "history_status": {
+        "name": "Consumption history status",
+        "state": {
+          "not_configured": "Not configured",
+          "not_checked": "Not checked",
+          "checking": "Checking",
+          "cached": "Cached data",
+          "success": "Successful",
+          "failed": "Failed"
+        }
       }
     },
     "button": {
       "check_documents": {
         "name": "Check documents"
+      },
+      "refresh_history": {
+        "name": "Refresh consumption history"
       }
     }
   },
   "exceptions": {
     "document_check_failed": {
       "message": "Could not read documents. Check the integration check status. Login credentials remain saved."
+    },
+    "history_not_configured": {
+      "message": "Enable history and select your home in integration options."
+    },
+    "history_check_failed": {
+      "message": "Could not refresh consumption history. Check the history status. Previous data is retained."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Consumption history",
+        "description": "Select your home point. Import from 2026, then refresh on the first day of each month at 06:00 and by button. No PDF or invoice reads.",
+        "data": {
+          "enable_history": "Enable consumption history"
+        }
+      },
+      "account": {
+        "title": "Select contract",
+        "data": {
+          "account": "Contract"
+        }
+      },
+      "point": {
+        "title": "Select your home consumption point",
+        "description": "Only this point will be queried. Failed or invalid reads do not replace saved history.",
+        "data": {
+          "point": "Consumption point"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Authentication failed. Check your credentials.",
+      "cannot_connect": "Cannot connect to TAURON.",
+      "interactive_login": "The portal requires an interactive login step (for example MFA).",
+      "portal_history": "History or the selected consumption point was not recognized. Previously confirmed data is retained."
+    },
+    "abort": {
+      "history_selection_required": "Select the contract again."
     }
   }
 }
