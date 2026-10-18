@@ -114,6 +114,8 @@ class TauronClient:
                     if attempt:
                         raise
                     await self._login()
+                except HistoryChanged:
+                    raise
                 except PortalChanged:
                     raise HistoryChanged("History response not recognized") from None
         raise AuthenticationError("Cannot establish session")
