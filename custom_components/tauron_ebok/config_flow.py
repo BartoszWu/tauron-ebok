@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from hashlib import sha256
 
 import voluptuous as vol
@@ -11,10 +12,12 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import DOMAIN
-from .history import HistoryAccount
+from .history import HistoryAccount, HistoryChanged
 from .history_coordinator import HISTORY_TARGET
 from .models import AuthenticationError, ConnectionError, InteractiveLoginRequired, PortalChanged
 from .transport import create_client
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def credentials_schema(username: str = "") -> vol.Schema:
@@ -123,6 +126,11 @@ class TauronOptionsFlow(OptionsFlow):
             return "invalid_auth"
         except ConnectionError:
             return "cannot_connect"
+        except HistoryChanged as err:
+            # Messages originate only in our adapter and contain no raw portal
+            # values, URLs, account IDs or response bodies.
+            _LOGGER.warning("History selection adapter: %s", err)
+            return "portal_history"
         except PortalChanged:
             return "portal_history"
         finally:
