@@ -1,141 +1,108 @@
 # TAURON eBOK
 
-Eksperymentalna, niezależna integracja Home Assistant do odczytu metadanych
-faktur z Mój TAURON. Nieoficjalny projekt, niezwiązany z TAURON.
+Eksperymentalna integracja Home Assistant do Mój TAURON, niezwiązana z TAURON.
 
-**Status 0.1.2: implementacja lokalna, bez testu logowania na rzeczywistym
-koncie i bez wdrożenia do Home Assistant.** Testy syntetyczne nie dowodzą
-zgodności z aktualnym HTML logowania ani archiwum. Repozytorium: [BartoszWu/tauron-ebok](https://github.com/BartoszWu/tauron-ebok).
-Wydanie służy do kontrolowanego testu konfiguracji i odczytu danych.
+**0.2.0: najpierw logowanie i zapis danych w HA, potem osobne sprawdzanie
+ dokumentów.** Logowanie na rzeczywistym koncie nadal wymaga potwierdzenia
+przez użytkownika. Błąd API dokumentów nie blokuje już konfiguracji.
 
-## Poprawka odczytu archiwum — 0.1.2
+## Konfiguracja
 
-Potwierdzono w źródle zalogowanego archiwum atrybuty `data-client-number`
-i `data-client-checksum`. Publiczny `/scripts/script.js` (funkcja
-`dataAjaxFillTable`) odczytuje je wraz z `data-system`. Parser wcześniej
-pomijał `data-client-checksum`, ponieważ rozpoznawał wyłącznie nazwę zgodną
-z parametrem API `clientNumberCheckSum`. Wersja 0.1.2 obsługuje oba warianty.
+1. W HACS dodaj niestandardowe repozytorium `BartoszWu/tauron-ebok`, typ Integracja.
+2. Pobierz TAURON eBOK i uruchom ponownie Home Assistant.
+3. Zamknij poprzedni formularz, odśwież stronę HA i wybierz Ustawienia →
+   Urządzenia i usługi → Dodaj integrację → TAURON eBOK.
+4. Wpisz samodzielnie login i hasło do Mój TAURON.
 
-Test regresyjny z rzeczywistymi nazwami atrybutów i fikcyjnymi wartościami
-odtwarzał błąd przed poprawką. Nie zapisano źródła konta ani jego wartości.
-Naprawa nie dodaje żadnych żądań POST; widoczny w stronie LoadMoreDocuments
-służy do doładowywania kolejnych umów i nie jest wywoływany przez integrację.
-Kompletność kont przy więcej niż początkowo pokazana liczba umów nadal wymaga
-osobnej weryfikacji.
+Formularz wykonuje logowanie HTTP i odczytuje stronę główną. Sprawdza
+przekierowanie, brak formularza logowania oraz link wylogowania na stronie
+zalogowanego użytkownika. Nie pobiera archiwum, listy umów, faktur ani PDF.
+Nie zapisuje danych, jeżeli nie potwierdzi zalogowanej strony.
 
-## Diagnostyka konfiguracji
+Po sukcesie zapisuje dane standardowym mechanizmem config entries HA. Hasło nie
+jest dodatkowo szyfrowane na dysku; chroń dostęp do HA i jego kopie zapasowe.
+Dane pozostają w HA po restarcie i aktualizacji integracji. Nie trzeba ich
+wpisywać ponownie przy każdym sprawdzeniu dokumentów. Po błędnym haśle lub
+zmianie zabezpieczeń może być potrzebna reautoryzacja.
 
-Wersja 0.1.1 rozróżnia błędy odpowiedzi logowania, archiwum/kontekstu klienta
-oraz listy dokumentów. Komunikat wskazuje etap, nie udowodnioną przyczynę.
-Nie zapisuje żadnych dodatkowych logów, odpowiedzi HTTP ani sekretów.
-Po błędzie zachowuje login w formularzu; hasło trzeba wpisać ponownie.
-Nie naprawia jeszcze nieustalonej niezgodności z portalem na rzeczywistym koncie.
+Start/restart integracji nie odpytuje portalu ani dokumentów. Błąd parsera
+faktur nie powoduje utraty zapisanego konta.
 
-## Zakres pierwszej wersji
+## Sprawdź dokumenty — osobny krok
 
-- Formularz konfiguracji w HA: login i hasło, weryfikacja przed zapisaniem wpisu.
-- Odrębna sesja HTTP w pamięci, bez Chrome i bez kopiowania cookies przeglądarki.
-- Próba logowania formularzem Keycloak po utracie sesji; jedna próba na skan.
-- Odczyt wszystkich stron dokumentów z ostatnich 180 dni, dla wykrytych kontekstów
-  klienta. Zakres dat i liczba klientów są atrybutami sensora liczby dokumentów.
-- Odrzucenie niekompletnych stron, powtórzeń, zmian liczby wyników i dokumentów
-  przypisanych do innego klienta. Błąd skanu oznacza niedostępność encji.
-- Aktualizacja co 24 godziny oraz przy uruchomieniu integracji.
-- Ponowne podanie hasła przez przepływ reautoryzacji Home Assistant.
-- Polskie i angielskie nazwy oraz komunikaty formularzy.
+W urządzeniu TAURON eBOK naciśnij **Sprawdź dokumenty**. Przycisk uruchamia
+jeden skan listy dokumentów z ostatnich 180 dni, z paginacją dla wykrytych
+kontekstów klienta. W razie potrzeby klient sam loguje się zapisanymi danymi.
+Przycisk można też wywołać w automatyzacji przez natywną akcję `button.press`,
+wybierając rzeczywistą encję utworzoną przez HA.
 
-Encje pokazują liczbę dokumentów w badanym okresie, datę wystawienia, kwotę
-brutto, termin i status ostatniego dokumentu oraz ostatnie poprawne sprawdzenie.
+**Nie ma automatycznego dziennego odpytywania.** Harmonogram można dodać później
+osobną automatyzacją. Samo dodanie integracji nie uruchamia tego przycisku.
+
+Status odczytu dokumentów:
+
+- **Nie sprawdzano** — nie wykonano jeszcze skanu w tym uruchomieniu.
+- **Sprawdzanie** — trwa żądanie.
+- **Odczytano** — skan zakończony poprawnie.
+- **Błąd** — skan niekompletny lub nieudany; atrybut `last_error` podaje stały kod
+  etapu, np. `portal_archive`, `portal_documents`, `cannot_connect`, `invalid_auth`.
+
+Błąd nie usuwa konfiguracji ani hasła. Ponowne naciśnięcie przycisku ponawia
+skan. Nie włączaj globalnego logowania HTTP i nie przesyłaj pełnych odpowiedzi,
+haseł ani cookies. Poprawne działanie API dokumentów pozostaje osobnym etapem
+weryfikacji — ta wersja rozdziela je od logowania.
+
+Encje metadanych: liczba dokumentów w okresie, data wystawienia, kwota brutto,
+termin i status ostatniego dokumentu, ostatni poprawny odczyt. Do czasu pierwszego
+skanu metadane są niedostępne, nie pokazują fikcyjnego zera. Po nieudanym skanie
+metadane są niedostępne; status błędu i czas ostatniego sukcesu pozostają widoczne.
 Przy wielu kontekstach ostatni dokument jest wybierany spośród wszystkich.
-Przy identycznej dacie rozstrzyga techniczny klucz, nie czas wystawienia.
-Jeżeli brakuje daty wystawienia któregoś dokumentu, ostatni dokument pozostaje
-nieustalony. Pusty poprawny wynik to liczba 0 i nieznane pola ostatniego dokumentu.
+Przy identycznej dacie rozstrzyga techniczny klucz, nie czas wystawienia. Brak
+którejkolwiek daty wystawienia pozostawia ostatni dokument nieustalony.
 
-Ta wersja nie pobiera PDF, nie zapisuje archiwum ani rejestru widzianych
-dokumentów i nie emituje powiadomień o nowych fakturach. Nie udostępnia salda
-ani wyliczonej sumy zaległości: kontrakt tych danych nie został zweryfikowany.
-Nie utożsamia kwoty ostatniej faktury z kwotą do zapłaty.
+## Bezpieczeństwo i ograniczenia
 
-## Instalacja przez HACS
+- Własna sesja HTTP tylko w pamięci. Bez Chrome, importowania cookies
+  przeglądarki i dodatkowego magazynu haseł.
+- HTTPS i jawna lista hostów: `moj.tauron.pl`, `logowanie.tauron.pl`.
+- POST tylko do formularza logowania. Odczyt strony głównej, archiwum i listy
+  przez GET. Bez płatności, zmian umowy, danych konta, zgód i odczytów licznika.
+- MFA/CAPTCHA kończy próbę błędem; integracja ich nie rozwiązuje.
+- Brak logowania danych konta, cookies, pełnych odpowiedzi i adresów z query.
+  Wyjątki transportu zastępowane są stałymi komunikatami.
+- Parser sprawdza kompletność stron, właściciela dokumentu, powtórzenia i zmianę
+  liczby wyników podczas skanu. Limit 100 stron zamiast niepełnego sukcesu.
+- Potwierdzono nazwy `data-client-number`, `data-client-checksum`, `data-system`
+  w HTML/publicznym skrypcie. Zasady unikalności ID, pełną paginację rzeczywistych
+  dokumentów i konta z większą liczbą umów trzeba jeszcze zweryfikować.
+- Brak PDF, lokalnego archiwum, powiadomień, salda i wyliczania zaległości.
+  Kwota ostatniego dokumentu nie oznacza kwoty do zapłaty.
 
-1. HACS → menu → Niestandardowe repozytoria.
-2. Dodaj `BartoszWu/tauron-ebok`, typ **Integracja**.
-3. Pobierz TAURON eBOK. Po instalacji nowej integracji uruchom ponownie HA
-   w dogodnym momencie — restart nie jest wykonywany przez tę integrację.
-4. Ustawienia → Urządzenia i usługi → Dodaj integrację → TAURON eBOK.
-5. Wpisz login i hasło samodzielnie. Formularz sprawdzi logowanie i listę faktur.
+Usunięcie integracji przez UI HA usuwa jej konfigurację i encje. AMIplus jest
+osobną integracją i nie jest zmieniany. Ta wersja nie tworzy archiwum PDF.
 
-Jeżeli zobaczysz błąd rozpoznawania portalu, przerwij ponawianie konfiguracji
-i zgłoś sam komunikat błędu; nie przesyłaj hasła, cookies ani pełnej odpowiedzi.
+## Testy
 
-## Konfiguracja i prywatność
-
-Po zatwierdzonym zainstalowaniu: Ustawienia → Urządzenia i usługi → Dodaj
-integrację → TAURON eBOK. Podaj dane do Mój TAURON, nie zakładaj, że konto
-eLicznika jest tym samym kontem. Hasło zapisuje mechanizm config entries HA;
-trzeba chronić dostęp do HA i jego kopie zapasowe. Integracja nie dodaje osobnego
-magazynu haseł ani trwałego magazynu cookies. Po restarcie loguje się ponownie.
-
-Nie loguje treści odpowiedzi, identyfikatorów klienta, adresów URL z query,
-haseł ani cookies. Wyjątki transportowe są zastępowane stałymi komunikatami.
-Nie włączaj globalnych logów ruchu HTTP podczas testu na prawdziwym koncie.
-Sesja jest odłączana bez zamykania współdzielonego konektora HA.
-
-Dozwolone są tylko HTTPS i jawnie wymienione hosty `moj.tauron.pl` oraz
-`logowanie.tauron.pl`. Klient wykonuje GET archiwum/listy i POST formularza
-logowania. Nie ma kodu płatności, zmiany umowy, zgód, danych konta ani odczytów.
-Nowy host SSO wymaga weryfikacji i aktualizacji listy. MFA/CAPTCHA kończy próbę
-błędem wymagającym działania użytkownika; integracja ich nie rozwiązuje.
-
-## Potwierdzone i niepotwierdzone elementy
-
-Pasywna analiza zalogowanej przeglądarki potwierdziła GET
-`/api/sitecore/EbokArchiveDocuments/GetDocuments`, pola `Documents`, `RangeFrom`,
-`RangeTo`, `TotalNumber`, `Status` i `StatusEnum`, zakres strony 1–5 oraz dane
-dokumentów użyte w parserze. Widziano także endpoint obrazu dokumentu z PDF
-w Base64; jego pobieranie nie jest częścią tego etapu.
-
-Nadal wymagają sprawdzenia na koncie:
-
-1. Przekierowania i formularz logowania HTTP do Mój TAURON. Algorytm oparto na
-   publicznym kodzie AMIplus, ale jego obsługa Mój TAURON jest nieaktywna.
-2. Działanie poprawionego parsera w pełnym cyklu konfiguracji HA. Nazwy
-   atrybutów klienta, checksum i systemu potwierdzono w HTML/publicznym skrypcie;
-   wartości w testach są fikcyjne. Parser nie łączy fragmentów z różnych
-   klientów. Nierozpoznany HTML kończy konfigurację błędem.
-3. Trwałość klucza z kontekstu klienta/systemu, typu, numeru technicznego i SodId.
-   Klucz jest roboczy; nie należy na nim jeszcze opierać trwałego archiwum.
-4. Zachowanie pustych stron, limity zakresów i zmiany listy podczas paginacji.
-   Po 100 stronach skan kończy się błędem zamiast zwracać niepełny wynik.
-5. Odzyskanie sesji po wygaśnięciu i ewentualne wylogowanie innych sesji przez SSO.
-
-Nie parsuje ilości energii ani stawek bez potwierdzenia jednostek i semantyki.
-
-## Walidacja lokalna
-
-Wymagany Python 3.13.2+ dla docelowego środowiska HA 2026.2+.
-Testy klienta używają wyłącznie biblioteki standardowej i fikcyjnych odpowiedzi:
+Testy klienta bez zależności i sieci:
 
 ```bash
 python -m unittest discover -s tests -v
 python -m compileall -q custom_components
-git diff --check
 ```
 
-Pełna walidacja formularzy, encji, startu i unload wymaga środowiska Home
-Assistant. Testy transportu stosują podstawiony interfejs sesji i nie testują
-samej biblioteki aiohttp. Nie wymagają dostępu do konta ani sieci.
+Testy na rzeczywistych klasach HA 2026.10.2 (Python 3.14), z fikcyjnymi danymi
+i klientem bez dostępu do portalu, w oddzielnym środowisku:
 
-## Kolejny etap
+```bash
+python -m pip install homeassistant==2026.10.2
+python -m unittest discover -s tests/ha -v
+```
 
-Po osobnej zgodzie: kontrolowana instalacja, samodzielne podanie danych przez
-użytkownika i test logowania, wykrywania kont oraz odczytu listy. Następnie
-uzupełnienie adapterów na podstawie rzeczywistego schematu, weryfikacja korekt
-i identyfikatorów, a dopiero potem lokalne archiwum PDF i wykrywanie nowości.
-
-Usunięcie integracji z UI HA usuwa jej wpis konfiguracji i encje. Nie trzeba
-zmieniać AMIplus. Ta wersja nie tworzy archiwum dokumentów do sprzątania.
+Sprawdzają utworzenie wpisu po samym logowaniu, odrzucenie błędnego hasła,
+start bez pobierania dokumentów, ręczny przycisk, zachowanie konfiguracji po
+błędzie i ponowienie odczytu. Oba zestawy uruchamia GitHub Actions.
 
 Źródła: [AMIplus connector.py](https://github.com/PiotrMachowski/Home-Assistant-custom-components-Tauron-AMIplus/blob/master/custom_components/tauron_amiplus/connector.py),
 [HA config flows](https://developers.home-assistant.io/docs/config_entries_config_flow_handler/),
-[HA fetching data](https://developers.home-assistant.io/docs/integration_fetching_data/).
+[HA fetching data](https://developers.home-assistant.io/docs/integration_fetching_data/),
+[HA button](https://developers.home-assistant.io/docs/core/entity/button/).

@@ -21,7 +21,15 @@ from .models import (
     PortalChanged,
     Snapshot,
 )
-from .portal import ARCHIVE, DOCUMENTS, LOGIN, PORTAL, discover_accounts, login_form
+from .portal import (
+    ARCHIVE,
+    DOCUMENTS,
+    LOGIN,
+    PORTAL,
+    discover_accounts,
+    has_session_marker,
+    login_form,
+)
 
 PAGE_SIZE = 5  # Verified portal range, not an assumed larger server limit.
 MAX_PAGES = 100
@@ -71,6 +79,18 @@ class TauronClient:
         payload = {**form.hidden, "username": self._username, "password": self._password}
         response = await self._transport.request("POST", form.action, data=payload)
         self._authenticated(response)
+
+    async def verify_login(self) -> None:
+        """Validate credentials without depending on contracts or invoice APIs."""
+        async with self._lock:
+            try:
+                await self._login()
+                response = await self._transport.request("GET", PORTAL)
+                self._authenticated(response)
+                if not has_session_marker(response.body):
+                    raise LoginPageChanged("Authenticated page not confirmed")
+            except PortalChanged:
+                raise LoginPageChanged("Authenticated page not confirmed") from None
 
     async def fetch(self, today: date) -> Snapshot:
         """Retry a complete scan once after authentication loss; never publish partial data."""

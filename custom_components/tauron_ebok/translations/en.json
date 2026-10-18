@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Connect Mój TAURON",
-        "description": "Enter your Mój TAURON credentials. This experimental integration validates login and reads invoice metadata. It does not download PDFs or make payments.",
+        "description": "Enter your Mój TAURON credentials. We will verify login only and save the credentials in Home Assistant after success. Check documents later using the integration button.",
         "data": {
           "username": "Username",
           "password": "Password"
@@ -51,7 +51,26 @@
       },
       "last_success": {
         "name": "Last successful check"
+      },
+      "check_status": {
+        "name": "Document check status",
+        "state": {
+          "not_checked": "Not checked",
+          "checking": "Checking",
+          "success": "Successful",
+          "failed": "Failed"
+        }
       }
+    },
+    "button": {
+      "check_documents": {
+        "name": "Check documents"
+      }
+    }
+  },
+  "exceptions": {
+    "document_check_failed": {
+      "message": "Could not read documents. Check the integration check status. Login credentials remain saved."
     }
   }
 }

@@ -9,14 +9,15 @@ from homeassistant.core import HomeAssistant
 from .coordinator import TauronCoordinator
 from .transport import create_client
 
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     client, transport = create_client(hass, entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD])
     coordinator = TauronCoordinator(hass, entry, client, transport)
     try:
-        await coordinator.async_config_entry_first_refresh()
+        # Credentials were validated by the config flow. Invoice errors must not
+        # prevent entry setup or saving the credentials, including after restart.
         entry.runtime_data = coordinator
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     except BaseException:

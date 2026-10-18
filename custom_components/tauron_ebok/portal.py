@@ -16,6 +16,34 @@ DOCUMENTS = f"{PORTAL}/api/sitecore/EbokArchiveDocuments/GetDocuments"
 ALLOWED_HOSTS = frozenset({"moj.tauron.pl", "logowanie.tauron.pl"})
 
 
+class SessionMarkerParser(HTMLParser):
+    """Recognize the logout link observed on authenticated portal pages."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.authenticated = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag != "a":
+            return
+        href = dict(attrs).get("href")
+        if not href:
+            return
+        parsed = urlsplit(urljoin(PORTAL, href))
+        if (
+            parsed.scheme == "https"
+            and parsed.hostname == "moj.tauron.pl"
+            and parsed.path.casefold() == "/api/sitecore/home/logout"
+        ):
+            self.authenticated = True
+
+
+def has_session_marker(html: str) -> bool:
+    parser = SessionMarkerParser()
+    parser.feed(html)
+    return parser.authenticated
+
+
 def safe_url(value: str, base: str = PORTAL) -> str:
     try:
         result = urljoin(base, value)
