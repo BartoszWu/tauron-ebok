@@ -5,11 +5,14 @@ from __future__ import annotations
 from hashlib import sha256
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import DOMAIN
+from .history import HistoryAccount
+from .history_coordinator import HISTORY_TARGET
 from .models import AuthenticationError, ConnectionError, InteractiveLoginRequired, PortalChanged
 from .transport import create_client
 
@@ -27,6 +30,11 @@ def credentials_schema(username: str = "") -> vol.Schema:
 
 class TauronConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry) -> OptionsFlow:
+        return TauronOptionsFlow()
 
     async def _validate(self, user_input: dict) -> str | None:
         client, transport = create_client(
@@ -88,4 +96,113 @@ class TauronConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+        )
+
+
+class TauronOptionsFlow(OptionsFlow):
+    """Explicit selection; no consumption is fetched for unselected contracts."""
+
+    def __init__(self) -> None:
+        self._accounts: dict[str, HistoryAccount] = {}
+        self._account: HistoryAccount | None = None
+        self._points: dict[str, str] = {}
+
+    async def _discover(self, account: HistoryAccount | None = None) -> str | None:
+        entry = self.config_entry
+        client, transport = create_client(
+            self.hass, entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD]
+        )
+        try:
+            if account is None:
+                self._accounts = {a.key: a for a in await client.history_accounts()}
+            else:
+                self._points = await client.history_points(account)
+        except InteractiveLoginRequired:
+            return "interactive_login"
+        except AuthenticationError:
+            return "invalid_auth"
+        except ConnectionError:
+            return "cannot_connect"
+        except PortalChanged:
+            return "portal_history"
+        finally:
+            await transport.close()
+        return None
+
+    async def async_step_init(self, user_input=None) -> ConfigFlowResult:
+        errors = {}
+        if user_input is not None:
+            if not user_input["enable_history"]:
+                options = dict(self.config_entry.options)
+                options.pop(HISTORY_TARGET, None)
+                return self.async_create_entry(title="", data=options)
+            error = await self._discover()
+            if error:
+                errors["base"] = error
+            elif len(self._accounts) == 1:
+                self._account = next(iter(self._accounts.values()))
+                return await self.async_step_point()
+            else:
+                return await self.async_step_account()
+        return self.async_show_form(
+            step_id="init",
+            errors=errors,
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        "enable_history",
+                        default=bool(self.config_entry.options.get(HISTORY_TARGET)),
+                    ): bool,
+                }
+            ),
+        )
+
+    async def async_step_account(self, user_input=None) -> ConfigFlowResult:
+        errors = {}
+        if user_input is not None:
+            self._account = self._accounts.get(user_input["account"])
+            if self._account is not None:
+                return await self.async_step_point()
+            errors["base"] = "portal_history"
+        choices = {key: f"{a.system} · …{a.billing[-4:]}" for key, a in self._accounts.items()}
+        return self.async_show_form(
+            step_id="account",
+            errors=errors,
+            data_schema=vol.Schema(
+                {
+                    vol.Required("account"): vol.In(choices),
+                }
+            ),
+        )
+
+    async def async_step_point(self, user_input=None) -> ConfigFlowResult:
+        errors = {}
+        if self._account is None:
+            return self.async_abort(reason="history_selection_required")
+        if user_input is not None and user_input.get("point") in self._points:
+            options = dict(self.config_entry.options)
+            options[HISTORY_TARGET] = {
+                "system": self._account.system,
+                "billing": self._account.billing,
+                "pod": user_input["point"],
+            }
+            return self.async_create_entry(title="", data=options)
+        if not self._points:
+            error = await self._discover(self._account)
+            if error:
+                errors["base"] = error
+        if not self._points:
+            return self.async_show_form(
+                step_id="point",
+                errors=errors or {"base": "portal_history"},
+                data_schema=vol.Schema({}),
+            )
+        return self.async_show_form(
+            step_id="point",
+            errors=errors,
+            data_schema=vol.Schema(
+                {
+                    vol.Required("point"): vol.In(self._points),
+                }
+            ),
         )

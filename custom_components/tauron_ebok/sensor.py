@@ -17,6 +17,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import TauronCoordinator
+from .history_coordinator import HistoryCoordinator
 
 SensorValue = str | int | Decimal | date | datetime | None
 
@@ -82,6 +83,10 @@ async def async_setup_entry(
     async_add_entities(
         TauronSensor(entry.runtime_data, entry, description) for description in SENSORS
     )
+    async_add_entities(
+        HistorySensor(entry.runtime_data.history, entry, key)
+        for key in ("history_total", "history_latest", "history_status", "history_last_success")
+    )
 
 
 class TauronSensor(CoordinatorEntity[TauronCoordinator], SensorEntity):
@@ -133,3 +138,78 @@ class TauronSensor(CoordinatorEntity[TauronCoordinator], SensorEntity):
             "date_to": data.date_to.isoformat(),
             "account_count": data.account_count,
         }
+
+
+class HistorySensor(CoordinatorEntity[HistoryCoordinator], SensorEntity):
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator: HistoryCoordinator, entry: ConfigEntry, key: str) -> None:
+        super().__init__(coordinator)
+        self.key = key
+        self._attr_unique_id = f"{entry.entry_id}_{key}"
+        self._attr_translation_key = key
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name="TAURON eBOK",
+            manufacturer="TAURON",
+            entry_type=DeviceEntryType.SERVICE,
+        )
+        if key in {"history_total", "history_latest"}:
+            self._attr_device_class = SensorDeviceClass.ENERGY
+            self._attr_native_unit_of_measurement = "kWh"
+            # A revisable archive is not a cumulative meter. Do not mix its
+            # snapshots into Energy or AMIplus long-term statistics.
+        elif key == "history_last_success":
+            self._attr_device_class = SensorDeviceClass.TIMESTAMP
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        else:
+            self._attr_device_class = SensorDeviceClass.ENUM
+            self._attr_options = [
+                "not_configured",
+                "not_checked",
+                "checking",
+                "cached",
+                "success",
+                "failed",
+            ]
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def available(self) -> bool:
+        # Retain confirmed cached values during an outage; freshness is explicit.
+        return (
+            self.key in {"history_status", "history_last_success"}
+            or self.coordinator.data is not None
+        )
+
+    @property
+    def native_value(self):
+        if self.key == "history_status":
+            return self.coordinator.check_status
+        if self.key == "history_last_success":
+            return self.coordinator.last_success
+        months = self.coordinator.months
+        if not months:
+            return None
+        if self.key == "history_latest":
+            return months[-1]["kwh"]
+        if any(m["kwh"] is None for m in months):
+            return None
+        return sum(Decimal(str(m["kwh"])) for m in months)
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        c = self.coordinator
+        result = {
+            "source": "moj_tauron",
+            "period_basis": "reading_date_month",
+            "last_error": c.last_error,
+            "last_success": c.last_success.isoformat() if c.last_success else None,
+            "last_check_success": {"success": True, "failed": False}.get(c.check_status),
+        }
+        if self.key == "history_total":
+            result["months"] = c.months
+            result["month_count"] = len(c.months)
+        elif self.key == "history_latest" and c.months:
+            result.update(c.months[-1])
+        return result

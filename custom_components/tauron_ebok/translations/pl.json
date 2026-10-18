@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Połącz Mój TAURON",
-        "description": "Podaj dane do Mój TAURON. Sprawdzimy wyłącznie logowanie i po sukcesie zapiszemy dane w Home Assistant. Dokumenty sprawdzisz później przyciskiem w integracji.",
+        "description": "Podaj dane logowania do Mój TAURON. Sprawdzimy tylko logowanie i zapiszemy dane w Home Assistant. Historię zużycia włączysz osobno w opcjach integracji.",
         "data": {
           "username": "Login",
           "password": "Hasło"
@@ -25,7 +25,8 @@
       "interactive_login": "Portal wymaga interaktywnego kroku logowania, np. MFA.",
       "portal_login": "Nie rozpoznano odpowiedzi lub przekierowania podczas logowania. Ten błąd nie oznacza, że hasło jest nieprawidłowe.",
       "portal_archive": "Nie udało się odczytać strony archiwum lub danych konta. Nie potwierdzono jeszcze poprawnego zalogowania.",
-      "portal_documents": "Odpowiedź listy dokumentów jest nierozpoznana lub niekompletna. Nie przyjęto wyników tego odczytu."
+      "portal_documents": "Odpowiedź listy dokumentów jest nierozpoznana lub niekompletna. Nie przyjęto wyników tego odczytu.",
+      "portal_history": "Nie rozpoznano historii zużycia lub wybranego punktu poboru. Zachowano ostatnie poprawne dane."
     },
     "abort": {
       "already_configured": "To konto jest już skonfigurowane.",
@@ -60,17 +61,79 @@
           "success": "Odczytano",
           "failed": "Błąd"
         }
+      },
+      "history_total": {
+        "name": "Zużycie w zaimportowanej historii"
+      },
+      "history_latest": {
+        "name": "Zużycie w ostatnim dostępnym miesiącu"
+      },
+      "history_last_success": {
+        "name": "Ostatni poprawny import historii"
+      },
+      "history_status": {
+        "name": "Status historii zużycia",
+        "state": {
+          "not_configured": "Nie skonfigurowano",
+          "not_checked": "Nie sprawdzano",
+          "checking": "Pobieranie",
+          "cached": "Dane zapisane",
+          "success": "Odczytano",
+          "failed": "Błąd"
+        }
       }
     },
     "button": {
       "check_documents": {
         "name": "Sprawdź dokumenty"
+      },
+      "refresh_history": {
+        "name": "Odśwież historię zużycia"
       }
     }
   },
   "exceptions": {
     "document_check_failed": {
       "message": "Nie udało się odczytać dokumentów. Sprawdź status odczytu w integracji. Dane logowania pozostają zapisane."
+    },
+    "history_not_configured": {
+      "message": "Włącz historię i wybierz dom w opcjach integracji."
+    },
+    "history_check_failed": {
+      "message": "Nie udało się odświeżyć historii. Sprawdź status odczytu. Poprzednie dane zachowano."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Historia zużycia",
+        "description": "Wybierz punkt domu. Import od 2026 roku, potem odświeżanie pierwszego dnia miesiąca o 06:00 i przyciskiem. Bez PDF i odczytu faktur.",
+        "data": {
+          "enable_history": "Włącz historię zużycia"
+        }
+      },
+      "account": {
+        "title": "Wybierz umowę",
+        "data": {
+          "account": "Umowa"
+        }
+      },
+      "point": {
+        "title": "Wybierz punkt poboru domu",
+        "description": "Tylko wybrany punkt będzie odczytywany. Błędne lub niepełne odczyty nie zastępują zapisanej historii.",
+        "data": {
+          "point": "Punkt poboru"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Logowanie nie powiodło się. Sprawdź dane.",
+      "cannot_connect": "Nie można połączyć się z TAURON.",
+      "interactive_login": "Portal wymaga interaktywnego kroku logowania, np. MFA.",
+      "portal_history": "Nie rozpoznano historii zużycia lub wybranego punktu poboru. Zachowano ostatnie poprawne dane."
+    },
+    "abort": {
+      "history_selection_required": "Wybierz ponownie umowę."
     }
   }
 }

@@ -9,6 +9,16 @@ from datetime import date, timedelta
 from typing import Protocol
 from urllib.parse import urlsplit
 
+from .history import (
+    BY_POINT,
+    HISTORY_LIST,
+    HistoryAccount,
+    HistoryChanged,
+    HistoryTarget,
+    Reading,
+    history_html,
+    parse_readings,
+)
 from .models import (
     Account,
     ArchivePageChanged,
@@ -91,6 +101,87 @@ class TauronClient:
                     raise LoginPageChanged("Authenticated page not confirmed")
             except PortalChanged:
                 raise LoginPageChanged("Authenticated page not confirmed") from None
+
+    async def _history_request(self, operation):
+        """Share one session/lock; retry only after authentication loss."""
+        async with self._lock:
+            for attempt in range(2):
+                try:
+                    return await operation()
+                except InteractiveLoginRequired:
+                    raise
+                except AuthenticationError:
+                    if attempt:
+                        raise
+                    await self._login()
+                except PortalChanged:
+                    raise HistoryChanged("History response not recognized") from None
+        raise AuthenticationError("Cannot establish session")
+
+    async def _history_accounts(self) -> tuple[HistoryAccount, ...]:
+        response = await self._transport.request("GET", PORTAL)
+        self._authenticated(response)
+        if not has_session_marker(response.body):
+            raise HistoryChanged("Authenticated page not confirmed")
+        accounts = tuple(history_html(response.body).accounts.values())
+        if not accounts:
+            raise HistoryChanged("No active history account found")
+        return accounts
+
+    async def history_accounts(self) -> tuple[HistoryAccount, ...]:
+        return await self._history_request(self._history_accounts)
+
+    async def _history_details(self, account: HistoryAccount):
+        if account not in await self._history_accounts():
+            raise HistoryChanged("Selected account is no longer active")
+        response = await self._transport.request(
+            "GET", HISTORY_LIST, params={"sid": account.system, "pp": account.billing}
+        )
+        self._authenticated(response)
+        links = {url for owner, url in history_html(response.body).details if owner == account}
+        if len(links) != 1:
+            raise HistoryChanged("History detail link not recognized")
+        response = await self._transport.request("GET", links.pop())
+        self._authenticated(response)
+        page = history_html(response.body)
+        if page.billing != account.billing or page.endpoint != BY_POINT or not page.points:
+            raise HistoryChanged("History context not recognized")
+        return page
+
+    async def history_points(self, account: HistoryAccount) -> dict[str, str]:
+        async def operation():
+            return (await self._history_details(account)).points
+
+        return await self._history_request(operation)
+
+    async def fetch_history(
+        self, target: HistoryTarget, start: date, end: date
+    ) -> tuple[Reading, ...]:
+        if start > end or start.year < 2026 or end.year - start.year > 10:
+            raise HistoryChanged("Unsupported history range")
+
+        async def operation():
+            page = await self._history_details(HistoryAccount(target.system, target.billing))
+            if target.pod not in page.points:
+                raise HistoryChanged("Selected point is no longer available")
+            response = await self._transport.request(
+                "GET",
+                BY_POINT,
+                params={
+                    "billingNumber": target.billing,
+                    "from": start.isoformat(),
+                    "to": end.isoformat(),
+                    "Pods": target.pod,
+                },
+            )
+            self._authenticated(response)
+            try:
+                payload = json.loads(response.body)
+            except ValueError:
+                raise HistoryChanged("Invalid history JSON") from None
+            return parse_readings(payload, target, start, end)
+
+        return await self._history_request(operation)
 
     async def fetch(self, today: date) -> Snapshot:
         """Retry a complete scan once after authentication loss; never publish partial data."""
