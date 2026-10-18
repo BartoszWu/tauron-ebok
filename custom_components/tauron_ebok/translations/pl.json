@@ -119,8 +119,8 @@
         }
       },
       "point": {
-        "title": "Wybierz punkt poboru domu",
-        "description": "Tylko wybrany punkt będzie odczytywany. Błędne lub niepełne odczyty nie zastępują zapisanej historii.",
+        "title": "Numer punktu poboru domu",
+        "description": "Wpisz numer PPE domu widoczny w Mój TAURON. Zapiszemy go tylko w HA. Odczyt GET pobiera jeden wskazany punkt; odpowiedź musi zawierać ten sam numer. Bez PDF.",
         "data": {
           "point": "Punkt poboru"
         }
@@ -130,7 +130,8 @@
       "invalid_auth": "Logowanie nie powiodło się. Sprawdź dane.",
       "cannot_connect": "Nie można połączyć się z TAURON.",
       "interactive_login": "Portal wymaga interaktywnego kroku logowania, np. MFA.",
-      "portal_history": "Nie rozpoznano historii zużycia lub wybranego punktu poboru. Zachowano ostatnie poprawne dane."
+      "portal_history": "Nie rozpoznano historii zużycia lub wybranego punktu poboru. Zachowano ostatnie poprawne dane.",
+      "invalid_point": "Podaj poprawny numer punktu poboru."
     },
     "abort": {
       "history_selection_required": "Wybierz ponownie umowę."

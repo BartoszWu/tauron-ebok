@@ -192,7 +192,6 @@ class HistoryHATests(unittest.IsolatedAsyncioTestCase):
         account = HistoryAccount(TARGET["system"], TARGET["billing"])
         client = SimpleNamespace(
             history_accounts=AsyncMock(return_value=(account,)),
-            history_points=AsyncMock(return_value={TARGET["pod"]: "Synthetic home"}),
             fetch_history=AsyncMock(),
         )
         transport = SimpleNamespace(close=AsyncMock())
@@ -214,7 +213,7 @@ class HistoryHATests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["type"], "create_entry")
         self.assertEqual(result["data"][HISTORY_TARGET], TARGET)
         client.fetch_history.assert_not_awaited()
-        self.assertEqual(transport.close.await_count, 2)
+        self.assertEqual(transport.close.await_count, 1)
 
     def test_calendar_month_boundary_including_year_and_dst(self):
         self.assertEqual(next_month(NOW).isoformat(), "2026-11-01T06:00:00+01:00")

@@ -13,23 +13,26 @@ każde wdrożenie wymaga sprawdzenia zgodności importu z tabelą dla wybranego 
 2. Dodaj TAURON eBOK w Ustawienia → Urządzenia i usługi. Podaj login i hasło.
    Formularz sprawdza tylko logowanie, a po sukcesie zapisuje standardowy config
    entry. Nie uzależnia konfiguracji od historii ani faktur.
-3. W istniejącej integracji wybierz **Konfiguruj**, włącz historię i wybierz punkt
-   poboru domu. Jeśli istnieje więcej aktywnych kontekstów, najpierw wybierz umowę.
+3. W istniejącej integracji wybierz **Konfiguruj**, włącz historię i wpisz numer
+   PPE domu widoczny w portalu. Jeśli istnieje więcej aktywnych kontekstów, najpierw wybierz umowę.
    Nie trzeba ponownie podawać hasła. Wyłączenie historii zatrzymuje harmonogram.
-4. Po wyborze punktu rozpoczyna się import od 1 stycznia 2026 do dzisiaj.
+4. Po wskazaniu punktu rozpoczyna się import od 1 stycznia 2026 do dzisiaj.
    **Odśwież historię zużycia** uruchamia kolejny odczyt ręcznie.
 
 Dom nie jest zakodowany w repozytorium. Identyfikatory wybranej umowy i punktu
-przechowuje HA w opcjach. Przed zapytaniem o zużycie klient sprawdza, czy wybrana
-umowa nadal jest aktywna i czy punkt należy do jej strony historii. Nie pobiera
+przechowuje HA w opcjach. Przed zapytaniem klient sprawdza, czy wybrana umowa
+nadal jest aktywna. Serwer otrzymuje tylko wybrany numer PPE; odpowiedź musi
+zawierać dokładnie ten jeden punkt. Inna lub zbiorcza odpowiedź jest odrzucana. Nie pobiera
 zużycia innych punktów ani starych, nieaktywnych umów.
 
 ## Historia zużycia
 
 Portal udostępnia JSON przez **GET**
 `/api/sitecore/EnergyConsumption/ByPoint` z parametrami `billingNumber`, `from`,
-`to` i pojedynczym `Pods`. Kontekst odkrywamy przez zalogowaną stronę główną,
-listę historii i jej szczegóły. Nie kopiujemy sesji Chrome. CSV nie jest potrzebny.
+`to` i pojedynczym `Pods`. Aktywny kontekst odkrywamy przez zalogowaną stronę główną. Nie zależymy od
+parsowania odnośników na stronie historii: HTTP i Chrome otrzymują tam różne
+warianty HTML. Numer PPE wskazuje się raz w opcjach. Nie kopiujemy sesji Chrome.
+CSV nie jest potrzebny.
 
 Z odpowiedzi zachowujemy wyłącznie datę odczytu, techniczny typ odczytu i kWh.
 Nie zapisujemy nazwiska, adresu, numeru licznika, stanu licznika, pełnej odpowiedzi

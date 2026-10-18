@@ -18,16 +18,6 @@ HOME = (
     '<a href="/api/sitecore/Home/LogOut">Out</a>'
     '<a href="/Home/Pages/Faktury?sid=TEST&amp;pp=synthetic-billing">Invoices</a>'
 )
-LIST = (
-    '<a href="/Home/Pages/historia-odczytow-licznika-prad/szczegoly?sid=TEST'
-    '&amp;cid=synthetic-billing&amp;checksum=synthetic">Details</a>'
-)
-DETAIL = (
-    '<div id="historia-odczytow" data-unit="kWh" data-append-params '
-    'data-api-by-point="/api/sitecore/EnergyConsumption/ByPoint" '
-    'data-billing-number="synthetic-billing"></div><input class="point-checkbox" '
-    'data-point-id="synthetic-pod" data-point-address="Synthetic home">'
-)
 
 
 def reading(day="22.01.2026", value=100, kind=4):
@@ -54,8 +44,6 @@ def payload(*rows):
 def responses(data=None):
     return [
         Response(200, PORTAL, HOME),
-        Response(200, h.HISTORY_LIST, LIST),
-        Response(200, PORTAL + h.DETAIL_PATH, DETAIL),
         Response(200, h.BY_POINT, json.dumps(data or payload())),
     ]
 
@@ -119,18 +107,10 @@ class HistoryParsingTests(unittest.TestCase):
         with self.assertRaises(models.PortalChanged):
             self.parse(payload(row))
 
-    def test_discover_active_accounts_and_strict_details(self):
+    def test_discover_only_active_accounts(self):
         self.assertEqual(len(h.history_html(HOME).accounts), 1)
-        self.assertEqual(len(h.history_html(LIST).details), 1)
-        page = h.history_html(DETAIL)
-        self.assertEqual(page.points, {TARGET.pod: "Synthetic home"})
-        self.assertEqual(page.endpoint, h.BY_POINT)
+        self.assertEqual(len(h.history_html(HOME + HOME).accounts), 1)
         self.assertNotIn("synthetic-billing", repr(TARGET))
-
-    def test_relative_detail_path_under_pages_directory(self):
-        page = h.history_html(LIST.replace("/Home/Pages/historia-", "historia-"))
-        self.assertEqual(len(page.details), 1)
-        self.assertEqual(page.details[0][0], h.HistoryAccount(TARGET.system, TARGET.billing))
 
 
 class HistoryClientTests(unittest.IsolatedAsyncioTestCase):
@@ -138,7 +118,7 @@ class HistoryClientTests(unittest.IsolatedAsyncioTestCase):
         transport = FakeTransport(*responses())
         result = await TauronClient(transport, "user", "pass").fetch_history(TARGET, START, END)
         self.assertEqual(len(result), 1)
-        self.assertEqual([c[0] for c in transport.calls], ["GET"] * 4)
+        self.assertEqual([c[0] for c in transport.calls], ["GET"] * 2)
         self.assertEqual(
             transport.calls[-1][2],
             {
@@ -160,18 +140,18 @@ class HistoryClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(sum(c[0] == "POST" for c in transport.calls), 1)
         self.assertEqual(transport.cleared, 1)
 
-    async def test_mismatched_point_or_billing_stops_before_consumption_request(self):
-        for html in [
-            DETAIL.replace("synthetic-pod", "other-pod"),
-            DETAIL.replace("synthetic-billing", "other-billing"),
-            DETAIL.replace("/ByPoint", "/Other"),
-        ]:
-            replies = responses()
-            replies[2] = Response(200, PORTAL + h.DETAIL_PATH, html)
-            transport = FakeTransport(*replies)
-            with self.assertRaises(h.HistoryChanged):
-                await TauronClient(transport, "u", "p").fetch_history(TARGET, START, END)
-            self.assertFalse(any(c[1] == h.BY_POINT for c in transport.calls))
+    async def test_other_point_response_is_not_accepted(self):
+        other = payload()
+        other[0]["Number"] = "other-pod"
+        transport = FakeTransport(*responses(other))
+        with self.assertRaises(h.HistoryChanged):
+            await TauronClient(transport, "u", "p").fetch_history(TARGET, START, END)
+        self.assertEqual(transport.calls[-1][2]["Pods"], TARGET.pod)
+
+    async def test_no_dependency_on_history_landing_or_detail_html(self):
+        transport = FakeTransport(*responses())
+        await TauronClient(transport, "u", "p").fetch_history(TARGET, START, END)
+        self.assertEqual([c[1] for c in transport.calls], [PORTAL, h.BY_POINT])
 
     async def test_inactive_account_is_not_queried(self):
         transport = FakeTransport(Response(200, PORTAL, HOME.replace("synthetic-billing", "other")))

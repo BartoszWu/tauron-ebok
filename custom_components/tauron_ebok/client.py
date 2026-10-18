@@ -11,7 +11,6 @@ from urllib.parse import urlsplit
 
 from .history import (
     BY_POINT,
-    HISTORY_LIST,
     HistoryAccount,
     HistoryChanged,
     HistoryTarget,
@@ -133,43 +132,6 @@ class TauronClient:
     async def history_accounts(self) -> tuple[HistoryAccount, ...]:
         return await self._history_request(self._history_accounts)
 
-    async def _history_details(self, account: HistoryAccount):
-        if account not in await self._history_accounts():
-            raise HistoryChanged("Selected account is no longer active")
-        response = await self._transport.request(
-            "GET", HISTORY_LIST, params={"sid": account.system, "pp": account.billing}
-        )
-        self._authenticated(response)
-        landing = history_html(response.body)
-        if landing.billing == account.billing and landing.endpoint == BY_POINT and landing.points:
-            return landing
-        links = {url for owner, url in landing.details if owner == account}
-        if len(links) != 1:
-            system_matches = sum(owner.system == account.system for owner, _ in landing.details)
-            billing_matches = sum(owner.billing == account.billing for owner, _ in landing.details)
-            hint_count = response.body.casefold().count("historia-odczytow-licznika-prad/szczegoly")
-            same_page = (
-                urlsplit(response.url).path.casefold() == urlsplit(HISTORY_LIST).path.casefold()
-            )
-            raise HistoryChanged(
-                f"History detail link not recognized: anchors={landing.anchor_count}, "
-                f"candidates={len(landing.details)}, matched={len(links)}, "
-                f"system_matches={system_matches}, billing_matches={billing_matches}, "
-                f"detail_hints={hint_count}, same_page={same_page}"
-            )
-        response = await self._transport.request("GET", links.pop())
-        self._authenticated(response)
-        page = history_html(response.body)
-        if page.billing != account.billing or page.endpoint != BY_POINT or not page.points:
-            raise HistoryChanged("History context not recognized")
-        return page
-
-    async def history_points(self, account: HistoryAccount) -> dict[str, str]:
-        async def operation():
-            return (await self._history_details(account)).points
-
-        return await self._history_request(operation)
-
     async def fetch_history(
         self, target: HistoryTarget, start: date, end: date
     ) -> tuple[Reading, ...]:
@@ -177,9 +139,8 @@ class TauronClient:
             raise HistoryChanged("Unsupported history range")
 
         async def operation():
-            page = await self._history_details(HistoryAccount(target.system, target.billing))
-            if target.pod not in page.points:
-                raise HistoryChanged("Selected point is no longer available")
+            if HistoryAccount(target.system, target.billing) not in await self._history_accounts():
+                raise HistoryChanged("Selected account is no longer active")
             response = await self._transport.request(
                 "GET",
                 BY_POINT,
