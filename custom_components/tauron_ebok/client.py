@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 
 from .history import (
     BY_POINT,
+    FIRST_YEAR,
     HistoryAccount,
     HistoryChanged,
     HistoryTarget,
@@ -135,7 +136,7 @@ class TauronClient:
     async def fetch_history(
         self, target: HistoryTarget, start: date, end: date
     ) -> tuple[Reading, ...]:
-        if start > end or start.year < 2026 or end.year - start.year > 10:
+        if start > end or start.year < FIRST_YEAR or end.year - start.year > 10:
             raise HistoryChanged("Unsupported history range")
 
         async def operation():

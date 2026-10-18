@@ -2,7 +2,7 @@
 
 Eksperymentalna, niezależna integracja Home Assistant do Mój TAURON.
 
-**0.3.0: miesięczna historia zużycia bez PDF, oddzielona od AMIplus i faktur.**
+**0.4.0: miesięczna historia zużycia bez PDF, oddzielona od AMIplus i faktur.**
 Logowanie i zapis konfiguracji potwierdzono na rzeczywistym koncie w 0.2.0.
 Strukturę odpowiedzi historii i sposób grupowania potwierdzono w portalu;
 każde wdrożenie wymaga sprawdzenia zgodności importu z tabelą dla wybranego punktu.
@@ -16,7 +16,7 @@ każde wdrożenie wymaga sprawdzenia zgodności importu z tabelą dla wybranego 
 3. W istniejącej integracji wybierz **Konfiguruj**, włącz historię i wpisz numer
    PPE domu widoczny w portalu. Jeśli istnieje więcej aktywnych kontekstów, najpierw wybierz umowę.
    Nie trzeba ponownie podawać hasła. Wyłączenie historii zatrzymuje harmonogram.
-4. Po wskazaniu punktu rozpoczyna się import od 1 stycznia 2026 do dzisiaj.
+4. Po wskazaniu punktu rozpoczyna się import od 1 stycznia 2024 do dzisiaj.
    **Odśwież historię zużycia** uruchamia kolejny odczyt ręcznie.
 
 Dom nie jest zakodowany w repozytorium. Identyfikatory wybranej umowy i punktu
@@ -125,3 +125,5 @@ Fixtures są syntetyczne; testy nie wykorzystują konta ani dokumentów użytkow
 [AMIplus](https://github.com/PiotrMachowski/Home-Assistant-custom-components-Tauron-AMIplus),
 [HA config flows](https://developers.home-assistant.io/docs/config_entries_config_flow_handler/),
 [HA fetching data](https://developers.home-assistant.io/docs/integration_fetching_data/).
+
+Aktualizacja do 0.4.0 jednorazowo uzupełnia lata 2024–2025 także przy istniejącym cache z 2026. Zapisuje początek sprawdzonego zakresu, więc brak danych z wcześniejszego roku nie wywołuje kolejnych pełnych importów. Dane nie są dzielone na sztuczne miesiące ani zapisywane w kodzie.

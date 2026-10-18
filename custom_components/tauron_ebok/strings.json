@@ -107,7 +107,7 @@
     "step": {
       "init": {
         "title": "Consumption history",
-        "description": "Select your home point. Import from 2026, then refresh on the first day of each month at 06:00 and by button. No PDF or invoice reads.",
+        "description": "Select your home point. Import from 2024, then refresh on the first day of each month at 06:00 and by button. No PDF or invoice reads.",
         "data": {
           "enable_history": "Enable consumption history"
         }

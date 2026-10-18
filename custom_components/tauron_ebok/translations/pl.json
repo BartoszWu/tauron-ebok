@@ -107,7 +107,7 @@
     "step": {
       "init": {
         "title": "Historia zużycia",
-        "description": "Wybierz punkt domu. Import od 2026 roku, potem odświeżanie pierwszego dnia miesiąca o 06:00 i przyciskiem. Bez PDF i odczytu faktur.",
+        "description": "Wybierz punkt domu. Import od 2024 roku, potem odświeżanie pierwszego dnia miesiąca o 06:00 i przyciskiem. Bez PDF i odczytu faktur.",
         "data": {
           "enable_history": "Włącz historię zużycia"
         }
