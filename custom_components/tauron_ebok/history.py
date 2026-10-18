@@ -13,8 +13,6 @@ from urllib.parse import parse_qs, urlsplit
 from .models import PortalChanged, number
 from .portal import PORTAL, safe_url
 
-HISTORY_LIST = f"{PORTAL}/Home/Pages/historia-odczytow-licznika-prad"
-DETAIL_PATH = "/Home/Pages/historia-odczytow-licznika-prad/szczegoly"
 BY_POINT = f"{PORTAL}/api/sitecore/EnergyConsumption/ByPoint"
 FIRST_YEAR = 2026
 
@@ -54,56 +52,31 @@ class HistoryTarget:
 
 
 class HistoryHTML(HTMLParser):
+    """Discover active billing contexts only; never scrape the fragile history landing."""
+
     def __init__(self) -> None:
         super().__init__()
         self.accounts: dict[str, HistoryAccount] = {}
-        self.details: list[tuple[HistoryAccount, str]] = []
-        self.billing: str | None = None
-        self.endpoint: str | None = None
-        self.points: dict[str, str] = {}
-        self.anchor_count = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         a = dict(attrs)
-        if tag == "a" and a.get("href"):
-            self.anchor_count += 1
-            # This portal still emits absolute http navigation links. Upgrade only
-            # same-host links before validating; never permit a credential redirect.
-            href = a["href"]
-            if href.startswith("http://moj.tauron.pl/"):
-                href = "https://" + href[len("http://") :]
+        if tag != "a" or not a.get("href"):
+            return
+        href = a["href"]
+        if href.startswith("http://moj.tauron.pl/"):
+            href = "https://" + href[len("http://") :]
+        parsed = urlsplit(href)
+        if not parsed.scheme and not href.startswith(("/", "#", "?")):
+            href = safe_url(href, f"{PORTAL}/Home/Pages/")
             parsed = urlsplit(href)
-            # Sitecore may emit a relative path under /Home/Pages/.
-            if not parsed.scheme and not href.startswith(("/", "#", "?")):
-                href = safe_url(href, f"{PORTAL}/Home/Pages/")
-                parsed = urlsplit(href)
-            if parsed.path.casefold() in {
-                "/home/pages/faktury",
-                "/home/pages/umowa",
-                DETAIL_PATH.casefold(),
-            }:
-                url = safe_url(href)
-                q = parse_qs(urlsplit(url).query)
-                customer_key = "cid" if parsed.path.casefold() == DETAIL_PATH.casefold() else "pp"
-                if len(q.get("sid", [])) == 1 and len(q.get(customer_key, [])) == 1:
-                    account = HistoryAccount(q["sid"][0], q[customer_key][0])
-                    if account.system and account.billing:
-                        if customer_key == "cid":
-                            self.details.append((account, url))
-                        else:
-                            self.accounts[account.key] = account
-        if a.get("id") == "historia-odczytow":
-            self.billing = a.get("data-billing-number")
-            self.endpoint = safe_url(a.get("data-api-by-point") or "")
-            if a.get("data-unit") != "kWh" or "data-append-params" not in a:
-                raise HistoryChanged("Unsupported history units or mode")
-        if tag == "input" and "point-checkbox" in (a.get("class") or "").split():
-            pod = a.get("data-point-id")
-            if pod:
-                label = a.get("data-point-address") or a.get("data-point-number") or pod
-                if pod in self.points and self.points[pod] != label:
-                    raise HistoryChanged("Conflicting point metadata")
-                self.points[pod] = label
+        if parsed.path.casefold() not in {"/home/pages/faktury", "/home/pages/umowa"}:
+            return
+        url = safe_url(href)
+        q = parse_qs(urlsplit(url).query)
+        if len(q.get("sid", [])) == 1 and len(q.get("pp", [])) == 1:
+            account = HistoryAccount(q["sid"][0], q["pp"][0])
+            if account.system and account.billing:
+                self.accounts[account.key] = account
 
 
 def history_html(html: str) -> HistoryHTML:

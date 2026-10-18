@@ -119,8 +119,8 @@
         }
       },
       "point": {
-        "title": "Select your home consumption point",
-        "description": "Only this point will be queried. Failed or invalid reads do not replace saved history.",
+        "title": "Your home consumption point number",
+        "description": "Enter the home POD number shown in Mój TAURON. It is stored only in HA. The GET requests one explicit point and the response must match it. No PDF.",
         "data": {
           "point": "Consumption point"
         }
@@ -130,7 +130,8 @@
       "invalid_auth": "Authentication failed. Check your credentials.",
       "cannot_connect": "Cannot connect to TAURON.",
       "interactive_login": "The portal requires an interactive login step (for example MFA).",
-      "portal_history": "History or the selected consumption point was not recognized. Previously confirmed data is retained."
+      "portal_history": "History or the selected consumption point was not recognized. Previously confirmed data is retained.",
+      "invalid_point": "Enter a valid consumption point number."
     },
     "abort": {
       "history_selection_required": "Select the contract again."
