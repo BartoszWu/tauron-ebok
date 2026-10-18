@@ -61,16 +61,22 @@ class HistoryHTML(HTMLParser):
         self.billing: str | None = None
         self.endpoint: str | None = None
         self.points: dict[str, str] = {}
+        self.anchor_count = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         a = dict(attrs)
         if tag == "a" and a.get("href"):
+            self.anchor_count += 1
             # This portal still emits absolute http navigation links. Upgrade only
             # same-host links before validating; never permit a credential redirect.
             href = a["href"]
             if href.startswith("http://moj.tauron.pl/"):
                 href = "https://" + href[len("http://") :]
             parsed = urlsplit(href)
+            # Sitecore may emit a relative path under /Home/Pages/.
+            if not parsed.scheme and not href.startswith(("/", "#", "?")):
+                href = safe_url(href, f"{PORTAL}/Home/Pages/")
+                parsed = urlsplit(href)
             if parsed.path.casefold() in {
                 "/home/pages/faktury",
                 "/home/pages/umowa",
