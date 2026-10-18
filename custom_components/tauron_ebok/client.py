@@ -140,9 +140,23 @@ class TauronClient:
             "GET", HISTORY_LIST, params={"sid": account.system, "pp": account.billing}
         )
         self._authenticated(response)
-        links = {url for owner, url in history_html(response.body).details if owner == account}
+        landing = history_html(response.body)
+        if landing.billing == account.billing and landing.endpoint == BY_POINT and landing.points:
+            return landing
+        links = {url for owner, url in landing.details if owner == account}
         if len(links) != 1:
-            raise HistoryChanged("History detail link not recognized")
+            system_matches = sum(owner.system == account.system for owner, _ in landing.details)
+            billing_matches = sum(owner.billing == account.billing for owner, _ in landing.details)
+            hint_count = response.body.casefold().count("historia-odczytow-licznika-prad/szczegoly")
+            same_page = (
+                urlsplit(response.url).path.casefold() == urlsplit(HISTORY_LIST).path.casefold()
+            )
+            raise HistoryChanged(
+                f"History detail link not recognized: anchors={landing.anchor_count}, "
+                f"candidates={len(landing.details)}, matched={len(links)}, "
+                f"system_matches={system_matches}, billing_matches={billing_matches}, "
+                f"detail_hints={hint_count}, same_page={same_page}"
+            )
         response = await self._transport.request("GET", links.pop())
         self._authenticated(response)
         page = history_html(response.body)

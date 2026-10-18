@@ -127,6 +127,11 @@ class HistoryParsingTests(unittest.TestCase):
         self.assertEqual(page.endpoint, h.BY_POINT)
         self.assertNotIn("synthetic-billing", repr(TARGET))
 
+    def test_relative_detail_path_under_pages_directory(self):
+        page = h.history_html(LIST.replace("/Home/Pages/historia-", "historia-"))
+        self.assertEqual(len(page.details), 1)
+        self.assertEqual(page.details[0][0], h.HistoryAccount(TARGET.system, TARGET.billing))
+
 
 class HistoryClientTests(unittest.IsolatedAsyncioTestCase):
     async def test_only_selected_point_gets_history_no_invoices_or_pdf(self):
