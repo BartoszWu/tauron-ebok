@@ -14,7 +14,7 @@ from .models import PortalChanged, number
 from .portal import PORTAL, safe_url
 
 BY_POINT = f"{PORTAL}/api/sitecore/EnergyConsumption/ByPoint"
-FIRST_YEAR = 2026
+FIRST_YEAR = 2024
 
 
 class HistoryChanged(PortalChanged):

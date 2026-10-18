@@ -153,6 +153,7 @@ class HistoryHATests(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_periodic_http_poll_and_monthly_timer_cancelled(self):
         self.coordinator.last_success = dt_util.as_utc(NOW)
+        self.coordinator.coverage_start = date(2024, 1, 1)
         with patch.object(self.entry, "async_create_background_task") as create:
             self.coordinator.async_start(self.entry)
             create.assert_not_called()
@@ -171,7 +172,37 @@ class HistoryHATests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(tasks), 1)
         await tasks[0]
         self.client.fetch_history.assert_awaited_once()
+        self.assertEqual(self.client.fetch_history.call_args.args[1], date(2024, 1, 1))
+
+    async def test_upgrade_backfills_once_even_when_older_years_have_no_readings(self):
+        await self.coordinator.async_refresh()
+        saved = await self.coordinator.store.async_load()
+        saved.pop("coverage_start")  # v0.3.3 cache
+        await self.coordinator.store.async_save(saved)
+        restored = HistoryCoordinator(self.hass, self.entry, self.client)
+        await restored.async_restore()
+        self.assertIsNone(restored.coverage_start)
+        self.assertEqual(restored.data, READINGS)
+        await restored.async_refresh()
+        self.assertEqual(self.client.fetch_history.call_args.args[1], date(2024, 1, 1))
+        self.assertEqual(restored.data, READINGS)
+        again = HistoryCoordinator(self.hass, self.entry, self.client)
+        await again.async_restore()
+        self.assertEqual(again.coverage_start, date(2024, 1, 1))
+        with patch.object(self.entry, "async_create_background_task") as create:
+            again.async_start(self.entry)
+            create.assert_not_called()
+        again.async_stop()
+        await restored.async_refresh()
         self.assertEqual(self.client.fetch_history.call_args.args[1], date(2026, 1, 1))
+
+    async def test_current_year_refresh_retains_backfilled_years(self):
+        older = Reading(date(2024, 5, 11), 4, Decimal("41"))
+        self.client.fetch_history.return_value = (older, *READINGS)
+        await self.coordinator.async_refresh()
+        self.client.fetch_history.return_value = READINGS
+        await self.coordinator.async_refresh()
+        self.assertEqual(self.coordinator.data, (older, *READINGS))
 
     async def test_monthly_callback_and_manual_button_use_same_import(self):
         await self.coordinator._monthly(NOW)

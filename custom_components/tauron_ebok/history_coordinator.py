@@ -42,6 +42,7 @@ class HistoryCoordinator(DataUpdateCoordinator[tuple[Reading, ...]]):
         self.store = Store(
             hass, 1, f"{DOMAIN}.history.{entry.entry_id}", private=True, atomic_writes=True
         )
+        self.coverage_start: date | None = None
         self.last_success: datetime | None = None
         self.check_status = "not_checked" if self.target else "not_configured"
         self.last_error: str | None = None
@@ -87,7 +88,12 @@ class HistoryCoordinator(DataUpdateCoordinator[tuple[Reading, ...]]):
                     raise ValueError
                 keys.add((day, kind))
                 parsed.append(Reading(day, kind, value))
+            coverage = saved.get("coverage_start")
+            coverage_start = date.fromisoformat(coverage) if coverage else None
+            if coverage_start is not None and coverage_start > stamp.date():
+                raise ValueError
             self.data = tuple(sorted(parsed, key=lambda r: (r.day, r.kind)))
+            self.coverage_start = coverage_start
             self.last_success = stamp
             self.check_status = "cached"
         except (KeyError, TypeError, ValueError, PortalChanged):
@@ -100,8 +106,11 @@ class HistoryCoordinator(DataUpdateCoordinator[tuple[Reading, ...]]):
         entry.async_on_unload(self.async_stop)
         now = dt_util.now()
         # Fresh cache means no portal read on restart. A missed month catches up once.
-        if self.last_success is None or (
-            dt_util.as_local(self.last_success).strftime("%Y-%m") != now.strftime("%Y-%m")
+        if (
+            self.coverage_start is None
+            or self.coverage_start.year > FIRST_YEAR
+            or self.last_success is None
+            or (dt_util.as_local(self.last_success).strftime("%Y-%m") != now.strftime("%Y-%m"))
         ):
             entry.async_create_background_task(
                 self.hass, self.async_refresh(), "tauron_ebok initial history import"
@@ -137,9 +146,11 @@ class HistoryCoordinator(DataUpdateCoordinator[tuple[Reading, ...]]):
         self.check_status, self.last_error = "checking", None
         self.async_update_listeners()
         today = dt_util.now().date()
-        # First import starts in 2026. Subsequently refresh the current year;
+        # Backfill from 2024 once, including upgrades of an existing 2026 cache.
+        # Subsequently refresh the current year;
         # January also revisits December, when delayed readings can still arrive.
-        year = FIRST_YEAR if self.data is None else today.year - (today.month == 1)
+        backfill = self.coverage_start is None or self.coverage_start.year > FIRST_YEAR
+        year = FIRST_YEAR if backfill else today.year - (today.month == 1)
         start = date(max(FIRST_YEAR, year), 1, 1)
         try:
             readings = await self.client.fetch_history(self.target, start, today)
@@ -149,6 +160,7 @@ class HistoryCoordinator(DataUpdateCoordinator[tuple[Reading, ...]]):
             # Commit storage before publishing so a failed save keeps the old snapshot.
             saved = {
                 "target_key": self.target.key,
+                "coverage_start": min(start, self.coverage_start or start).isoformat(),
                 "last_success": stamp.isoformat(),
                 "readings": [r.serialize() for r in updated],
             }
@@ -169,6 +181,7 @@ class HistoryCoordinator(DataUpdateCoordinator[tuple[Reading, ...]]):
         except OSError:
             self.check_status, self.last_error = "failed", "history_storage"
             raise UpdateFailed("Cannot save TAURON history") from None
+        self.coverage_start = min(start, self.coverage_start or start)
         self.last_success = stamp
         self.check_status = "success"
         return updated
